@@ -12,8 +12,10 @@ app.use(express.json())
 app.get('/', (req, res) => {
     res.send('Car Doctor Server is Running...')
 })
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@firstmongodb.yjij5fj.mongodb.net/?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 });
+// const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@firstmongodb.yjij5fj.mongodb.net/?retryWrites=true&w=majority`;
+const uri = "mongodb://localhost:27017"
+
+const client = new MongoClient(uri);
 //JWT Tokens and Verifications
 
  //Genarate a Access token for the user to access restricted data
@@ -24,15 +26,15 @@ const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology:
 })
 //Get the AccessToken from the Client site
 const verifyJWT = (req, res, next) => {
-    const authHeader = req.headers.authorization;
-    if(!authHeader){
+    const getHeader = req.headers.authorization;
+    if(!getHeader){
         return res.status(401).send({message: 'unauthorized access'})
     }
-    const token = authHeader.split(' ')[1]
+    const token = getHeader.split(' ')[1]
     // console.log(token);
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded){
         if(err){
-            res.status(401).send({message: 'You are not Authorized'})
+            return res.status(401).send({message: 'You are not Authorized'})
         }
         req.decoded = decoded;
         next() 
@@ -68,9 +70,10 @@ const dbConnect = () => {
     })
     //Get data based on query
     app.get('/orders', verifyJWT, async(req, res)=>{
-        const decoded = req.decoded;
+        try{
+            const decoded = req.decoded;
         const email = req.query.email;
-        if(decoded.email !== email){
+        if(decoded?.email !== email){
             res.status(401).send({message: 'Data Forbidden for you'})
         }
 
@@ -83,6 +86,10 @@ const dbConnect = () => {
         const cursor = orderData.find(query)
         const order = await cursor.toArray()
         res.send(order)
+        }
+        catch(err){
+            console.log(err);
+        }
     })
     //Delete a Specific Data from MongoDB
     app.delete('/orders/:id', async(req, res)=> {
